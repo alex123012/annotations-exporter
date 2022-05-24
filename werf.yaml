@@ -1,0 +1,24 @@
+project: annotations-exporter
+configVersion: 1
+---
+artifact: builder
+from: golang:1.18.2
+git:
+- add: /
+  to: /app
+shell:
+  beforeSetup:
+    - cd /app
+    - go mod init annotations-exporter && go mod tidy
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o annotations-exporter .
+---
+image: app
+from: alpine:3.15
+import:
+  - artifact: builder
+    add: /app/annotations-exporter
+    to: /
+    before: setup
+shell:
+  setup:
+  - chmod +x /annotations-exporter

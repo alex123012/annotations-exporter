@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      serviceAccountName: {{ .Chart.Name }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: registrysecret
+      - name: regcred
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.werf.image.app }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          name: metrics
+          protocol: TCP
+        command:
+        {{- range ( pluck .Values.werf.env .Values.app.command | first | default .Values.app.command._default ) }}
+        - {{ . }}
+        {{- end }}
+        args:
+        {{- range ( pluck .Values.werf.env .Values.app.args | first | default .Values.app.args._default ) }}
+        - {{ . }}
+        {{- end }}

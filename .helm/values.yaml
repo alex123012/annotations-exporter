@@ -1,0 +1,13 @@
+app:
+  command:
+    _default:
+    - /annotations-exporter
+  args:
+    _default:
+    - -label=app
+    - -annotation=ci.werf.io/commit
+    - -annotation=gitlab.ci.werf.io/pipeline-url
+  ports:
+  _default:
+  - name: metrics
+    port: 2112
