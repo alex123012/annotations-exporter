@@ -25,9 +25,10 @@ spec:
         image: {{ .Values.werf.image.app }}
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 5000
-          name: metrics
-          protocol: TCP
+ {{- range pluck .Values.werf.env .Values.app.ports | first | default .Values.app.ports._default }}
+        - containerPort: {{ .port }}
+          name: {{ .name }}
+ {{- end }}
         command:
         {{- range ( pluck .Values.werf.env .Values.app.command | first | default .Values.app.command._default ) }}
         - {{ . }}
