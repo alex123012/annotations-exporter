@@ -45,9 +45,11 @@ func (m *GaugeMetric) RegisterMetric() {
 
 func (m *GaugeMetric) ExportLabelsAndAnnotations(object *unstructured.Unstructured) []string {
 	values := make([]string, len(m.PrometheusLabels))
+
 	values[0] = object.GetKind()
 	values[1] = object.GetName()
 	values[2] = object.GetNamespace()
+	values[3] = getStatusField(object)
 
 	for label, value := range object.GetLabels() {
 		if i, f := m.mapLabels[label]; f {
@@ -84,7 +86,7 @@ func (m *GaugeMetric) GetMetric() *prometheus.GaugeVec {
 
 func NewGaugeMetric(annotations, labels []string) *GaugeMetric {
 	metric := &GaugeMetric{}
-	metric.defaultLabels = []string{"kind", "name", "namespace"}
+	metric.defaultLabels = []string{"kind", "name", "namespace", "status_phase"}
 	customLabels := append(annotations, labels...)
 	metric.PrometheusLabels = append(metric.defaultLabels, customLabels...)
 	metric.mapLabels = make(map[string]int)
@@ -100,4 +102,20 @@ func formatString(str string) string {
 	str = strings.ReplaceAll(str, ".", "_")
 	str = strings.ReplaceAll(str, "-", "_")
 	return str
+}
+
+func getStatusField(object *unstructured.Unstructured) string {
+
+	switch object.GetKind() == "Pod" {
+	case true:
+		status, found, err := unstructured.NestedString(object.Object, "status", "phase")
+		if !found || err != nil {
+			return ""
+		}
+		return status
+	case false:
+		return ""
+	}
+	klog.Warning("Something went wrong while getting status field")
+	return ""
 }
