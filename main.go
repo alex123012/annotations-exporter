@@ -27,10 +27,10 @@ import (
 
 func main() {
 	var (
-		namespace   string
 		port        int
 		local       bool
 		stats       bool
+		namespaces  []string
 		annotations []string
 		labels      []string
 		resources   []string
@@ -39,11 +39,11 @@ func main() {
 	run := func(ctx context.Context) error {
 		clusterConfig := GenerateNewConfig(local)
 		resources := rc.ResourcesConfig{
-			Resources: ar.GetResourceList(clusterConfig, resources),
-			NameSpace: namespace,
+			Resources:  ar.GetResourceList(clusterConfig, resources),
+			NameSpaces: namespaces,
 		}
-		controller := rc.NewResourceController(resources, clusterConfig, annotations, labels)
 		grp, ctx := errgroup.WithContext(ctx)
+		controller := rc.NewResourceController(ctx, resources, clusterConfig, annotations, labels)
 		grp.Go(func() error {
 			return controller.Run(ctx)
 		})
@@ -74,13 +74,13 @@ func main() {
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.StringVar(&namespace, "namespace", v1.NamespaceAll, "Specifies the namespace that the exporter will monitor resources in, defaults to all")
-	flags.BoolVar(&local, "local", false, "local or in cluster configuration")
-	flags.BoolVar(&stats, "stats", false, "Show cpu and memory allocation")
+	flags.BoolVar(&local, "local", false, "Use local (kubeconfig) or in cluster(serviceaccount) configuration for connecting to cluster")
+	flags.BoolVar(&stats, "stats", false, "Log cpu and memory allocation")
 	flags.IntVarP(&port, "port", "p", 8888, "Port to use for metrics server")
-	flags.StringSliceVarP(&annotations, "annotations", "A", []string{}, "annotations names to use in metric labels")
-	flags.StringSliceVarP(&labels, "labels", "L", []string{}, "labels names to use in metric labels")
+	flags.StringSliceVarP(&annotations, "annotations", "A", []string{}, "annotations names to use in prometheus metric labels")
+	flags.StringSliceVarP(&labels, "labels", "L", []string{}, "labels names to use in prometheus metric labels")
 	flags.StringSliceVarP(&resources, "resources", "R", []string{"deployments", "ingresses", "pods"}, "Resource types to export labels and annotations")
+	flags.StringSliceVarP(&namespaces, "namespaces", "n", []string{v1.NamespaceAll}, "Specifies the namespace that the exporter will monitor resources in, defaults to all")
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 

@@ -31,32 +31,39 @@ type ResourceController struct {
 
 type ResourcesConfig struct {
 	Resources     []schema.GroupVersionResource
-	NameSpace     string
+	NameSpaces    []string
 	LogPodsStatus bool
 }
 
 func (c *ResourceController) Run(ctx context.Context) error {
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.clusterClient, time.Minute, c.Resources.NameSpace, nil)
+	bigGroup, ctx := errgroup.WithContext(ctx)
+	for _, namespace := range c.Resources.NameSpaces {
+		ns := namespace
+		bigGroup.Go(func() error {
+			factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.clusterClient, time.Minute, ns, nil)
 
-	group, ctx := errgroup.WithContext(ctx)
-	cacheSyncs := make([]cache.InformerSynced, len(c.Resources.Resources))
-	for i, resource := range c.Resources.Resources {
-		informer := factory.ForResource(resource).Informer()
+			group, ctx := errgroup.WithContext(ctx)
+			cacheSyncs := make([]cache.InformerSynced, len(c.Resources.Resources))
+			for i, resource := range c.Resources.Resources {
+				informer := factory.ForResource(resource).Informer()
 
-		cacheSyncs[i] = informer.HasSynced
-		handler := c.informerHandler(ctx, informer)
-		group.Go(handler)
+				cacheSyncs[i] = informer.HasSynced
+				handler := c.informerHandler(ctx, informer)
+				group.Go(handler)
+			}
+			isSynced := cache.WaitForCacheSync(ctx.Done(), cacheSyncs...)
+			c.sycnMutex.Lock()
+			c.cacheSynced = isSynced
+			c.sycnMutex.Unlock()
+
+			if !c.CheckCacheSync() {
+				klog.Fatal("failed to sync cache")
+			}
+
+			return group.Wait()
+		})
 	}
-	isSynced := cache.WaitForCacheSync(ctx.Done(), cacheSyncs...)
-	c.sycnMutex.Lock()
-	c.cacheSynced = isSynced
-	c.sycnMutex.Unlock()
-
-	if !c.CheckCacheSync() {
-		klog.Fatal("failed to sync cache")
-	}
-
-	return group.Wait()
+	return bigGroup.Wait()
 }
 
 func (c *ResourceController) CheckCacheSync() bool {
@@ -142,7 +149,7 @@ func (a *ResourceController) informerHandler(ctx context.Context, informer cache
 	}
 }
 
-func NewResourceController(resources ResourcesConfig, clusterConfig *rest.Config, annotations, labels []string) *ResourceController {
+func NewResourceController(ctx context.Context, resources ResourcesConfig, clusterConfig *rest.Config, annotations, labels []string) *ResourceController {
 	clusterClient, err := dynamic.NewForConfig(clusterConfig)
 
 	if err != nil {
@@ -152,12 +159,26 @@ func NewResourceController(resources ResourcesConfig, clusterConfig *rest.Config
 	metric := NewGaugeMetric(annotations, labels)
 
 	var allResourcesNow []unstructured.Unstructured
+	mux := &sync.Mutex{}
+	wg, ctx := errgroup.WithContext(ctx)
 	for _, res := range resources.Resources {
-		list, err := clusterClient.Resource(res).Namespace(resources.NameSpace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
+		rs := res
+		wg.Go(func() error {
+			for _, namespace := range resources.NameSpaces {
+				list, err := clusterClient.Resource(rs).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+				if err != nil {
+					return err
+				}
+				mux.Lock()
+				allResourcesNow = append(allResourcesNow, list.Items...)
+				mux.Unlock()
+			}
 			return nil
-		}
-		allResourcesNow = append(allResourcesNow, list.Items...)
+		})
+	}
+	err = wg.Wait()
+	if err != nil {
+		klog.Exitln(err)
 	}
 	for _, res := range allResourcesNow {
 		generatedLabels := metric.ExportLabelsAndAnnotations(&res)
