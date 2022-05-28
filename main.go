@@ -2,117 +2,146 @@ package main
 
 import (
 	"context"
-	"flag"
-	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
+	"os/signal"
 	"path/filepath"
-	"strings"
-	"sync"
+	"runtime"
+	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	ar "github.com/alex123012/annotations-exporter/src/apiresources"
+	rc "github.com/alex123012/annotations-exporter/src/resourcecontroller"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/kubernetes"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	v1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-)
-
-const (
-	INGRESS     = "Ingress"
-	STATEFULSET = "StatefulSet"
-	POD         = "Pod"
-	DEPLOYMENT  = "Deployment"
-	SERVICE     = "Service"
+	"k8s.io/klog/v2"
 )
 
 func main() {
-	var local bool
-	var config *rest.Config
-	var err error
-	var annotations, labels ArrayFlags
-
-	flag.BoolVar(&local, "local", false, "local or in cluster")
-	flag.Var(&annotations, "annotation", "annotations to export")
-	flag.Var(&labels, "label", "labels to export")
-	flag.Parse()
-	prometheus_labels := append(annotations, labels...)
-
-	clear_prometheus_labels := GetClearLabels(prometheus_labels)
-
-	fmt.Println(prometheus_labels)
-	fmt.Println(clear_prometheus_labels)
-
-	if local {
-		fmt.Println("Using local configuration")
-		config, err = clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
-	} else {
-		fmt.Println("Using in cluster configuration")
-		config, err = rest.InClusterConfig()
-	}
-	if err != nil {
-		panic(err.Error())
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Setuping prometheus")
-	gaugeVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "custom_app_annotations_and_labels",
-		Help: "annotation and labels from kube resources",
-	}, append([]string{"kind", "name", "namespace"}, clear_prometheus_labels...),
+	var (
+		namespace   string
+		local       bool
+		stats       bool
+		annotations []string
+		labels      []string
+		resources   []string
 	)
-	prometheus.Register(gaugeVec)
-	fmt.Println("Starting scrapper")
-	go GenerateMetrics(clientset, gaugeVec, prometheus_labels)
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":2112", nil)
+
+	run := func(ctx context.Context) error {
+		clusterConfig := GenerateNewConfig(local)
+		resources := rc.ResourcesConfig{
+			Resources: ar.GetResourceList(clusterConfig, resources),
+			NameSpace: namespace,
+		}
+		controller := rc.NewResourceController(resources, clusterConfig, annotations, labels)
+		grp, ctx := errgroup.WithContext(ctx)
+		grp.Go(func() error {
+			return controller.Run(ctx)
+		})
+
+		grp.Go(func() error {
+			mux := http.NewServeMux()
+			svr := &http.Server{Addr: ":2112", Handler: mux}
+
+			mux.Handle("/metrics", promhttp.Handler())
+			mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {})
+			mux.HandleFunc("/__/pprof/profile", pprof.Profile)
+			mux.HandleFunc("/__/pprof/trace", pprof.Trace)
+			mux.HandleFunc("/__/pprof/cmdline", pprof.Cmdline)
+			mux.HandleFunc("/__/pprof/symbol", pprof.Symbol)
+			mux.HandleFunc("/__/shutdown", func(w http.ResponseWriter, r *http.Request) {
+				svr.Shutdown(ctx)
+			})
+			mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+				if !controller.CheckCacheSync() {
+					w.WriteHeader(http.StatusPreconditionFailed)
+				}
+			})
+
+			c := make(chan os.Signal)
+			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+			go func() {
+				defer svr.Shutdown(ctx)
+				<-c
+			}()
+			return svr.ListenAndServe()
+		})
+		if stats {
+			grp.Go(func() error {
+				mem := &runtime.MemStats{}
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				go func() {
+					for {
+						cpu := runtime.NumCPU()
+						log.Println("CPU:", cpu)
+
+						rot := runtime.NumGoroutine()
+						log.Println("Goroutine:", rot)
+
+						// Byte
+						runtime.ReadMemStats(mem)
+						log.Println("Memory:", mem.Alloc/1024)
+
+						time.Sleep(2 * time.Second)
+						log.Println("-------")
+					}
+				}()
+				<-ctx.Done()
+				return nil
+			})
+		}
+		return grp.Wait()
+	}
+
+	cmd := &cobra.Command{
+		Use:     "annoexp",
+		Short:   "Export annotations and labels from k8s resources to prometheus metrics",
+		Version: "0.0.2",
+		Run: func(cmd *cobra.Command, args []string) {
+			ctx := cmd.Context()
+
+			if err := run(ctx); err != nil {
+				klog.Exitln(err)
+			}
+		},
+	}
+
+	flags := cmd.PersistentFlags()
+	flags.StringVar(&namespace, "namespace", v1.NamespaceAll, "Specifies the namespace that the exporter will monitor resources in, defaults to all")
+	flags.BoolVar(&local, "local", false, "local or in cluster configuration")
+	flags.BoolVar(&stats, "stats", false, "Show cpu and memory allocation")
+	flags.StringSliceVarP(&annotations, "annotations", "A", []string{}, "annotations names to use in metric labels")
+	flags.StringSliceVarP(&labels, "labels", "L", []string{}, "labels names to use in metric labels")
+	flags.StringSliceVarP(&resources, "resources", "R", []string{"deployments", "ingresses"}, "Resource types to export labels and annotations")
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		klog.Exitln(err)
+	}
 }
 
-func GenerateMetrics(clientset *kubernetes.Clientset, metric *prometheus.GaugeVec, prometheus_labels ArrayFlags) {
-	for {
-		start := time.Now()
-		namespaces, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Fatal(err)
-		}
-		const max_goroutines = 5
-		semaphore := make(chan struct{}, max_goroutines)
-		wg := sync.WaitGroup{}
-		for i, ns := range namespaces.Items {
-			ns_name := ns.GetName()
-			if strings.HasPrefix(ns_name, "d8-") || strings.HasPrefix(ns_name, "kube-") {
-				continue
-			}
-			semaphore <- struct{}{}
-			wg.Add(1)
-			go func(ns_name string, i int) {
-				defer wg.Done()
-				resourceList := []ResourcesInterface{
-					NewPod(),
-					NewDeployment(),
-					NewStatefulSets(),
-					NewIngress(),
-				}
-				for _, res := range resourceList {
-					res.GetObjectItems(clientset, ns_name)
-					err = res.CombineLabels(metric, prometheus_labels)
-					if err != nil {
-						log.Fatal(err)
-					}
-					fmt.Println(res.GetResourceType(), len(res.GetItems()), ns_name)
-				}
-				<-semaphore
-			}(ns_name, i)
-		}
-		wg.Wait()
-		elapsed := time.Since(start)
-		log.Printf("\ntook %s", elapsed)
+func GenerateNewConfig(local bool) *rest.Config {
+	var clusterConfig *rest.Config
+	var err error
+
+	switch local {
+	case true:
+		clusterConfig, err = clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
+	case false:
+		clusterConfig, err = rest.InClusterConfig()
 	}
+	if err != nil {
+		klog.Exitln(err)
+	}
+
+	return clusterConfig
 }
