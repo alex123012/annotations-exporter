@@ -1,5 +1,6 @@
 # Binaries for programs and plugins
 test_yaml.yaml
+bin
 *.exe
 *.exe~
 *.dll
