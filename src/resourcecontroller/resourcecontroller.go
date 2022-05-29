@@ -30,9 +30,8 @@ type ResourceController struct {
 }
 
 type ResourcesConfig struct {
-	Resources     []schema.GroupVersionResource
-	NameSpaces    []string
-	LogPodsStatus bool
+	Resources  []schema.GroupVersionResource
+	NameSpaces []string
 }
 
 func (c *ResourceController) Run(ctx context.Context) error {

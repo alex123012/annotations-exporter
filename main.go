@@ -37,11 +37,22 @@ func main() {
 	)
 
 	run := func(ctx context.Context) error {
+
 		clusterConfig := GenerateNewConfig(local)
 		resources := rc.ResourcesConfig{
 			Resources:  ar.GetResourceList(clusterConfig, resources),
 			NameSpaces: namespaces,
 		}
+		klog.Infoln("***Namespaces to watch:")
+		for _, ns := range namespaces {
+			klog.Infof(ns)
+		}
+		klog.Infoln()
+		klog.Infoln("***Objects to watch***")
+		for _, res := range resources.Resources {
+			klog.Infof("apiVersion: %s/%s, kind: %s", res.Group, res.Version, res.Resource)
+		}
+		klog.Infoln()
 		grp, ctx := errgroup.WithContext(ctx)
 		controller := rc.NewResourceController(ctx, resources, clusterConfig, annotations, labels)
 		grp.Go(func() error {

@@ -1,6 +1,8 @@
 package apiresources
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -23,7 +25,7 @@ func (a *AllResources) getAllApiResources(config *rest.Config) {
 	if err != nil {
 		panic(err.Error())
 	}
-	_, APIResourceListSlice, err := discoveryClient.ServerGroupsAndResources()
+	APIResourceListSlice, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -38,12 +40,8 @@ func (a *AllResources) getAllApiResources(config *rest.Config) {
 		for _, resource := range singleAPIResourceList.APIResources {
 
 			a.allResources = append(a.allResources, ApiResource{
-				Resource: schema.GroupVersionResource{
-					Resource: resource.Name,
-					Group:    gv.Group,
-					Version:  gv.Version,
-				},
-				AllNames: append(resource.ShortNames, resource.Name),
+				Resource: gv.WithResource(resource.Name),
+				AllNames: append(resource.ShortNames, resource.Name, strings.ToLower(resource.Kind)),
 			})
 		}
 	}
@@ -78,6 +76,5 @@ func GetResourceList(config *rest.Config, resources []string) []schema.GroupVers
 			klog.Exitf("Resource %s can't be found in any api groups", res)
 		}
 	}
-	klog.Infoln("Resources to watch for:", resultList)
 	return resultList
 }
