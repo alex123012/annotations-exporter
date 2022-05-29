@@ -37,3 +37,4 @@ spec:
         {{- range ( pluck .Values.werf.env .Values.app.args | first | default .Values.app.args._default ) }}
         - {{ . }}
         {{- end }}
+        - -p {{ (index (pluck .Values.werf.env .Values.app.ports | first | default .Values.app.ports._default) 0).port }}
