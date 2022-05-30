@@ -5,9 +5,7 @@ metadata:
   name: {{ .Chart.Name }}
 spec:
   ports:
- {{- range (pluck .Values.werf.env .Values.app.ports | first | default .Values.app.ports._default) }}
-  - port: {{ .port }}
-    name: {{ .name }}
- {{- end }}
+  - port: {{ pluck .Values.werf.env .Values.app.args.port | first | default .Values.app.args.port._default }}
+    name: metrics
   selector:
     app: {{ .Chart.Name }}

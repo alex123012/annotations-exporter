@@ -3,11 +3,23 @@ app:
     _default:
     - /annotations-exporter
   args:
-    _default:
-    - --label=app
-    - --annotations=ci.werf.io/commit,gitlab.ci.werf.io/pipeline-url
-    - -R deploy,pod,ingress,sts
-  ports:
-    _default:
-    - name: metrics
-      port: 5000
+    resources:
+      _default:
+      - sts
+      - deploy
+      - ingress
+      - pod
+    annotations:
+      _default:
+      - ci.werf.io/commit
+      - gitlab.ci.werf.io/pipeline-url
+    labels:
+      _default:
+      - app
+    namespaces:
+      _default:
+      - ""  # "" (empty string) for all namespaces
+    port:
+      _default: 5000
+    stats:
+      _default: false
