@@ -44,7 +44,6 @@ app.kubernetes.io/name: {{ include "exporter.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-
 {{- define "parse.resource.string" }}
   {{- $arg := . }}
 	{{- $splitString := "/" }}
