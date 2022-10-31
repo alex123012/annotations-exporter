@@ -12,15 +12,4 @@ entries:
     urls:
     - https://github.com/alex123012/annotations-exporter/releases/download/annotations-exporter-0.4.0/annotations-exporter-0.4.0.tgz
     version: 0.4.0
-  - apiVersion: v2
-    created: "2022-10-31T12:38:23.428934221Z"
-    description: Prometheus exporter that collects Kubernetes cluster events and exposes
-      them as metric samples.
-    digest: 7418aef5764084a923d279f0c779455b1c4d1cb6df409022414a802b2490725b
-    kubeVersion: '>=1.10.0-0'
-    name: annotations-exporter
-    type: application
-    urls:
-    - https://github.com/alex123012/annotations-exporter/releases/download/annotations-exporter-0.2.0/annotations-exporter-0.2.0.tgz
-    version: 0.2.0
 generated: "2022-10-31T14:35:18.504988937Z"
