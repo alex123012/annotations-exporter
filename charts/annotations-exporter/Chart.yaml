@@ -1,6 +1,0 @@
-apiVersion: v2
-type: application
-name: annotations-exporter
-version: 0.2.0
-kubeVersion: ">=1.10.0-0"
-description: "Prometheus exporter that collects Kubernetes cluster events and exposes them as metric samples."
