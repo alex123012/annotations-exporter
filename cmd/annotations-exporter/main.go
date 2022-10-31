@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -18,14 +17,19 @@ import (
 )
 
 var (
-	exporterAddress string   = ":5000"
+	exporterAddress string   = ":8000"
 	namespaces      []string = []string{v1.NamespaceAll}
 	annotations     []string
 	labels          []string
-	resources       []string = []string{"deployments/apps", "ingresses/v1/networking.k8s.io", "sts/apps", "daemonsets/apps"}
-	maxRevisions    int      = 3
-	logLevel        string
-	kubeconfig      string
+	resources       []string = []string{
+		"deployments/apps",
+		"ingresses/v1/networking.k8s.io",
+		"statefulsets/apps",
+		"daemonsets/apps",
+	}
+	maxRevisions int = 3
+	logLevel     string
+	kubeconfig   string
 )
 
 func main() {
@@ -42,14 +46,14 @@ func main() {
 	}
 
 	flags := cmd.PersistentFlags()
-	flag.StringVar(&exporterAddress, "server.exporter-address", exporterAddress, "Address to export prometheus metrics")
-	flag.StringVar(&logLevel, "server.log-level", logLevel, "Log level")
+	flags.StringVar(&exporterAddress, "server.exporter-address", exporterAddress, "Address to export prometheus metrics")
+	flags.StringVar(&logLevel, "server.log-level", logLevel, "Log level")
 	flags.StringSliceVar(&annotations, "kube.annotations", annotations, "Annotations names to use in prometheus metric labels")
 	flags.StringSliceVar(&labels, "kube.labels", labels, "Labels names to use in prometheus metric labels")
 	flags.StringSliceVar(&resources, "kube.resources", resources, "Resources (<resource>/<version>/<api> or <resource>/<api>) to export labels and annotations")
 	flags.StringSliceVar(&namespaces, "kube.namespaces", namespaces, "Specifies the namespace that the exporter will monitor resources in (default 'all namespaces')")
 	flags.IntVar(&maxRevisions, "kube.max-revisions", maxRevisions, "Max revisions of resource labels to store")
-	flag.StringVar(&kubeconfig, "kube.config", kubeconfig, "Path to kubeconfig (optional)")
+	flags.StringVar(&kubeconfig, "kube.config", kubeconfig, "Path to kubeconfig (optional)")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -59,7 +63,8 @@ func main() {
 }
 
 func Run(ctx context.Context) error {
-	if err := validateNamespaces(namespaces); err != nil {
+	namespaces, err := validateNamespaces(namespaces)
+	if err != nil {
 		return err
 	}
 
@@ -72,7 +77,7 @@ func Run(ctx context.Context) error {
 		return err
 	}
 	for _, res := range apiResources {
-		log.Fatal(res)
+		log.Printf("Starting watching for resource: %s", res.String())
 	}
 
 	metricVault := collector.NewVault()

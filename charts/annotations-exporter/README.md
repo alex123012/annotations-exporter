@@ -1,8 +1,8 @@
-# events-exporter
+# annotations-exporter
 
-![Version: 0.0.3](https://img.shields.io/badge/Version-0.0.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
-Prometheus exporter that collects Kubernetes cluster events and exposes them as metric samples.
+Prometheus-exporter, which converts any Kubernetes resources annotations and labels to Prometheus samples.
 
 ## Requirements
 
@@ -15,9 +15,8 @@ Kubernetes: `>=1.10.0-0`
 | replicaCount | int | `1` | Number of replicas (pods) to launch. |
 | image.repository | string | `"ghcr.io/alex123012/annotations-exporter"` | Name of the image repository to pull the container image from. |
 | image.pullPolicy | string | `"IfNotPresent"` | [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node. |
-| image.tag | string | `"latest"` | Image tag override for the default value (chart appVersion). |
-| cmdArgs | object | `{"kube.annotations":["ci.werf.io/commit","gitlab.ci.werf.io/pipeline-url"],"kube.labels":["app"],"kube.max-revisions":3,"kube.namespaces":[""],"kube.resources":["sts/apps","deploy/apps","ingress/apps","pod/v1/"],"server.log-level":"debug"}` | Command line argument options for exporter. |
-| cmdArgs."kube.resources" | list | `["sts/apps","deploy/apps","ingress/apps","pod/v1/"]` | Kubernetes resources for annotations and labels to export. |
+| image.tag | string | `"v0.2.0"` | Image tag override for the default value (chart appVersion). |
+| cmdArgs."kube.resources" | list | `["deployments/apps","ingresses/v1/networking.k8s.io","statefulsets/apps","daemonsets/apps"]` | Kubernetes resources for annotations and labels to export. |
 | cmdArgs."kube.annotations" | list | `["ci.werf.io/commit","gitlab.ci.werf.io/pipeline-url"]` | Kubernetes resources annotations to export. |
 | cmdArgs."kube.labels" | list | `["app"]` | Kubernetes resources labels to export. |
 | cmdArgs."kube.namespaces" | list | `[""]` | Kubernetes namespaces to watch. |
@@ -45,7 +44,7 @@ Kubernetes: `>=1.10.0-0`
 | service.annotations | object | `{}` | Annotations to be added to the service. |
 | service.type | string | `"ClusterIP"` | Kubernetes [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | service.clusterIP | string | `""` | Internal cluster service IP (when applicable) |
-| service.ports.port | int | `5000` | HTTP service port |
+| service.ports.port | int | `8000` | HTTP service port |
 | service.ports.nodePort | int | `nil` | HTTP node port (when applicable) |
 
 ----------------------------------------------

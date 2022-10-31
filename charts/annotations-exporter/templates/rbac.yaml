@@ -35,7 +35,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: {{ ternary "ClusterRoleBinding" "RoleBinding" ( not $namespace ) }}
 metadata:
   name: {{ include "exporter.fullname" $ }}
-  namespace: {{ include "exporter.fullname" $ }}
+{{ ternary "" ( printf "namespace: %s" $namespace ) ( not $namespace ) | indent 2 }}
   labels:
     {{- include "exporter.labels" $ | nindent 4 }}
 subjects:

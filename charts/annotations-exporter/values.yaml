@@ -9,16 +9,15 @@ image:
   pullPolicy: IfNotPresent
 
   # -- Image tag override for the default value (chart appVersion).
-  tag: "latest"
+  tag: "v0.2.0"
 
-# -- Command line argument options for exporter.
 cmdArgs:
   # -- Kubernetes resources for annotations and labels to export.
   "kube.resources":
-    - sts/apps
-    - deploy/v1/apps
-    - ingress/apps
-    - pod/v1/
+    - "deployments/apps"
+    - "ingresses/v1/networking.k8s.io"
+    - "statefulsets/apps"
+    - "daemonsets/apps"
   # -- Kubernetes resources annotations to export.
   "kube.annotations":
     - ci.werf.io/commit
@@ -28,8 +27,7 @@ cmdArgs:
     - app
   # -- Kubernetes namespaces to watch.
   "kube.namespaces":
-    - "rabbitmq-system" # "" (empty string) for all namespaces
-    - "cert-manager"
+    - "" # "" (empty string) for all namespaces
   # -- Max revisions of resource labels to store.
   "kube.max-revisions": 3
   # -- Log level.
@@ -152,7 +150,7 @@ service:
 
   ports:
     # -- HTTP service port
-    port: 5000
+    port: 8000
 
     # -- (int) HTTP node port (when applicable)
     nodePort:

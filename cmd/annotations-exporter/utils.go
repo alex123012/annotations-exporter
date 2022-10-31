@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	v1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -45,13 +46,16 @@ func GenerateNewConfig(kubeconfigPath string) (*rest.Config, error) {
 	return cfg, nil
 }
 
-func validateNamespaces(namespaces []string) error {
+func validateNamespaces(namespaces []string) ([]string, error) {
+	if len(namespaces) == 0 {
+		return []string{v1.NamespaceAll}, nil
+	}
 	for _, namespace := range namespaces {
 		if namespace == "" && len(namespaces) > 1 {
-			return fmt.Errorf("can't use several namespaces with all ('') namespaces specified")
+			return nil, fmt.Errorf("can't use several namespaces with all ('') namespaces specified")
 		}
 	}
-	return nil
+	return namespaces, nil
 }
 
 // func RunMetricsServer(ctx context.Context, controller *rc.ResourceController, port int) error {

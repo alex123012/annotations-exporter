@@ -1,4 +1,4 @@
-# Events Exporter
+# Annotations Exporter
 
 ## Overview
 
@@ -18,7 +18,7 @@ Usage of annotations-exporter:
   --kube.namespaces strings
           Specifies the namespace that the exporter will monitor resources in (default 'all namespaces')
   --kube.resources strings
-          Resources (<resource>/<version>/<api> or <resource>/<api>) to export labels and annotations (default [deployments/apps,ingresses/v1/networking.k8s.io,sts/apps,daemonsets/apps])
+          Resources (<resource>/<version>/<api> or <resource>/<api>) to export labels and annotations (default [deployments/apps,ingresses/v1/networking.k8s.io,statefulsets/apps,daemonsets/apps])
   -v, --version
           version for annotations-exporter
 ```
@@ -27,7 +27,7 @@ Usage of annotations-exporter:
 
 ### Docker Container
 
-Ready-to-use Docker images are [available on GitHub](https://github.com/alex123012/annotations-exporter/pkgs/container/events_exporter).
+Ready-to-use Docker images are [available on GitHub](https://github.com/alex123012/annotations-exporter/pkgs/container/annotations-exporter).
 
 ```bash
 docker pull ghcr.io/alex123012/annotations-exporter:latest
@@ -36,8 +36,8 @@ docker pull ghcr.io/alex123012/annotations-exporter:latest
 ### Helm Chart
 
 The first version of helm chart is available.
-1. Follow the instruction from [artifacthub](https://artifacthub.io/packages/helm/events-exporter/events-exporter) to install the chart
-2. After the installation, metrics will be available on address `http://annotations-exporter.annotations-exporter:5000/metrics`
+1. Follow the instruction from [artifacthub](https://artifacthub.io/packages/helm/annotations-exporter/annotations-exporter) to install the chart
+2. After the installation, metrics will be available on address `http://annotations-exporter.annotations-exporter:8000/metrics`
 
 ## Dashboards
 

@@ -31,14 +31,9 @@ func GetAllApiResources(config *rest.Config) (map[schema.GroupVersionResource]sc
 	errGroup, _ := errgroup.WithContext(context.Background())
 	resourceChan := make(chan resourceToMap)
 	for _, singleAPIResourceList := range APIResourceListSlice {
-		apiVersion, err := schema.ParseGroupVersion(singleAPIResourceList.GroupVersion)
-		if err != nil {
-			return nil, err
-		}
-		apiResources := singleAPIResourceList.APIResources
+		apiResourcesList := singleAPIResourceList
 		errGroup.Go(func() error {
-			getNamesFromResources(apiResources, apiVersion, resourceChan)
-			return nil
+			return getNamesFromResources(apiResourcesList, resourceChan)
 		})
 	}
 
@@ -53,7 +48,6 @@ func GetAllApiResources(config *rest.Config) (map[schema.GroupVersionResource]sc
 		case err := <-errorCh:
 			if err != nil {
 				close(errorCh)
-				close(resourceChan)
 				return nil, err
 			}
 			return resourceKindMap, nil
@@ -62,36 +56,32 @@ func GetAllApiResources(config *rest.Config) (map[schema.GroupVersionResource]sc
 		}
 	}
 }
-func getNamesFromResources(apiResource []v1.APIResource, apiVersion schema.GroupVersion, resourceChan chan<- resourceToMap) {
-	for _, resource := range apiResource {
+func getNamesFromResources(apiResource *v1.APIResourceList, resourceChan chan<- resourceToMap) error {
+	apiVersion, err := schema.ParseGroupVersion(apiResource.GroupVersion)
+	if err != nil {
+		return err
+	}
+	for _, resource := range apiResource.APIResources {
 		groupVersionResource := schema.GroupVersionResource{
 			Resource: resource.Name,
 			Version:  apiVersion.Version,
 			Group:    apiVersion.Group,
 		}
-		for _, name := range append([]string{resource.Name, resource.SingularName,
-			resource.Kind, strings.ToLower(resource.Kind)}, resource.ShortNames...) {
-			if name == "" {
-				continue
-			}
-			resourceChan <- resourceToMap{
-				Key: schema.GroupVersionResource{
-					Resource: name,
-					Group:    apiVersion.Group,
-				},
-				Value: groupVersionResource,
-			}
 
-			resourceChan <- resourceToMap{
-				Key: schema.GroupVersionResource{
-					Resource: name,
-					Version:  apiVersion.Version,
-					Group:    apiVersion.Group,
-				},
-				Value: groupVersionResource,
-			}
+		resourceKeyValue := resourceToMap{
+			Key: schema.GroupVersionResource{
+				Resource: resource.Name,
+				Version:  apiVersion.Version,
+				Group:    apiVersion.Group,
+			},
+			Value: groupVersionResource,
 		}
+		resourceChan <- resourceKeyValue
+
+		resourceKeyValue.Key.Version = ""
+		resourceChan <- resourceKeyValue
 	}
+	return nil
 }
 
 func CompareWithApiResources(config *rest.Config, flagList []string) ([]schema.GroupVersionResource, error) {
