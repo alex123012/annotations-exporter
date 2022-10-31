@@ -1,6 +1,6 @@
 apiVersion: v2
 type: application
 name: annotations-exporter
-version: 0.3.0
+version: 0.4.0
 kubeVersion: ">=1.10.0-0"
 description: "Prometheus-exporter, which converts any Kubernetes resources annotations and labels to Prometheus samples."

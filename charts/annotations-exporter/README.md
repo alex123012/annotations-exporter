@@ -1,6 +1,6 @@
 # annotations-exporter
 
-![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 Prometheus-exporter, which converts any Kubernetes resources annotations and labels to Prometheus samples.
 
@@ -15,7 +15,7 @@ Kubernetes: `>=1.10.0-0`
 | replicaCount | int | `1` | Number of replicas (pods) to launch. |
 | image.repository | string | `"ghcr.io/alex123012/annotations-exporter"` | Name of the image repository to pull the container image from. |
 | image.pullPolicy | string | `"IfNotPresent"` | [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node. |
-| image.tag | string | `"v0.3.0"` | Image tag override for the default value (chart appVersion). |
+| image.tag | string | `"v0.4.0"` | Image tag override for the default value (chart appVersion). |
 | cmdArgs."kube.resources" | list | `["deployments/apps","ingresses/v1/networking.k8s.io","statefulsets/apps","daemonsets/apps"]` | Kubernetes resources for annotations and labels to export. |
 | cmdArgs."kube.annotations" | list | `["ci.werf.io/commit","gitlab.ci.werf.io/pipeline-url"]` | Kubernetes resources annotations to export. |
 | cmdArgs."kube.labels" | list | `["app"]` | Kubernetes resources labels to export. |

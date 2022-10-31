@@ -9,7 +9,7 @@ image:
   pullPolicy: IfNotPresent
 
   # -- Image tag override for the default value (chart appVersion).
-  tag: "v0.3.0"
+  tag: "v0.4.0"
 
 cmdArgs:
   # -- Kubernetes resources for annotations and labels to export.
