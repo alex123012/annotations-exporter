@@ -1,0 +1,5 @@
+{{ template "chart.baseHead" . }}
+
+## Values
+
+{{ template "chart.valuesSection" . }}

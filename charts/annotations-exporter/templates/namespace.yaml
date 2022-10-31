@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    {{- include "exporter.labels" . | nindent 4 }}
+  name: {{ include "exporter.fullname" . }}
