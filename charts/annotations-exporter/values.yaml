@@ -9,7 +9,7 @@ image:
   pullPolicy: IfNotPresent
 
   # -- Image tag override for the default value (chart appVersion).
-  tag: "v0.0.2"
+  tag: "latest"
 
 # -- Command line argument options for exporter.
 cmdArgs:
