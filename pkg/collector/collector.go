@@ -22,7 +22,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const labelsSeparator = byte(255)
+const (
+	labelsSeparator   = byte(255)
+	ApplicationPrefix = "annotations_exporter_"
+)
 
 type ConstMetricCollector interface {
 	Describe(chan<- *prometheus.Desc)
@@ -33,7 +36,6 @@ type ConstMetricCollector interface {
 
 type ResourceGaugeMetric struct {
 	RevisionMetrics []RevisionGaugeMetric
-	ResourceLabels  []string
 }
 type RevisionGaugeMetric struct {
 	RevisionValue float64
@@ -52,10 +54,14 @@ func NewConstGaugeCollector(mapping Mapping) *GaugeCollector {
 
 	resultPrometheusLabels := ConcatMultipleSlices(
 		[][]string{
-			formatPromethuesLabelSlice(mapping.KubeResourceMeta, ""),
-			formatPromethuesLabelSlice(mapping.KubeLabels, "kube_label_"),
-			formatPromethuesLabelSlice(mapping.KubeAnnotations, "kube_annotation_"),
-			{"revision"},
+			formatPromethuesLabelSlice(mapping.KubeResourceMeta, ApplicationPrefix),
+
+			formatPromethuesLabelSlice(mapping.ReferenceLabels, ApplicationPrefix+"label_"),
+			formatPromethuesLabelSlice(mapping.ReferenceAnnotations, ApplicationPrefix+"annotation_"),
+
+			formatPromethuesLabelSlice(mapping.KubeLabels, ApplicationPrefix+"label_"),
+			formatPromethuesLabelSlice(mapping.KubeAnnotations, ApplicationPrefix+"annotation_"),
+			{ApplicationPrefix + "revision"},
 		})
 
 	desc := prometheus.NewDesc(mapping.Name, mapping.Help, resultPrometheusLabels, nil)
@@ -86,14 +92,27 @@ func (c *GaugeCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *GaugeCollector) Store(sample Sample) {
-	labelsHash := hashLabels(sample.ResourceMeta)
+	kubeReferenceForHash := ConcatMultipleSlices(
+		[][]string{
+			compareLabelsSliceWithMap(c.mapping.ReferenceLabels, sample.ResourceLabels),
+			compareLabelsSliceWithMap(c.mapping.ReferenceAnnotations, sample.ResourceAnnotations),
+		})
+
+	if !c.mapping.OnlyLabelsAndAnnotations {
+		kubeReferenceForHash = ConcatMultipleSlices([][]string{
+			sample.ResourceMeta,
+			kubeReferenceForHash,
+		})
+	}
+
+	labelsHash := hashLabels(kubeReferenceForHash)
 
 	lastRevision := 0
 	newMetric := RevisionGaugeMetric{
 		RevisionValue: float64(lastRevision),
 		LabelValues: ConcatMultipleSlices(
 			[][]string{
-				sample.ResourceMeta,
+				kubeReferenceForHash,
 				compareLabelsSliceWithMap(c.mapping.KubeLabels, sample.ResourceLabels),
 				compareLabelsSliceWithMap(c.mapping.KubeAnnotations, sample.ResourceAnnotations),
 				{fmt.Sprint(lastRevision)},
@@ -106,7 +125,6 @@ func (c *GaugeCollector) Store(sample Sample) {
 	if !ok {
 		storedResourceMetrics = &ResourceGaugeMetric{
 			RevisionMetrics: make([]RevisionGaugeMetric, c.mapping.MaxRevisions),
-			ResourceLabels:  sample.ResourceMeta,
 		}
 		storedResourceMetrics.RevisionMetrics[lastRevision] = newMetric
 	} else {

@@ -56,3 +56,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
     {{- fail ( printf "Can't parse resource string %s" $arg ) }}
   {{- end }}
 {{- end }}
+
+{{- define "format.prom.label" }}
+	{{- $arg := . }}
+	{{- $result := replace "/" "_" $arg }}
+	{{- $result = replace "." "_" $result }}
+	{{- $result = replace "-" "_" $result }}
+	{{- lower $result }}
+{{- end }}

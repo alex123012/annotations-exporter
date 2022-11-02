@@ -1,5 +1,6 @@
 # Binaries for programs and plugins
 test_*.yaml
+charts/annotations-exporter/dashboards
 bin
 *.exe
 *.exe~
