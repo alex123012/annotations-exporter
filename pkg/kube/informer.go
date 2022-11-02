@@ -30,7 +30,8 @@ type InformerController struct {
 }
 
 // NewResourcesInformer creates cached informer to track resources from a Kubernetes cluster.
-func NewResourcesInformer(config *rest.Config, namespaces []string, resources []schema.GroupVersionResource, metricCollector *collector.MetricsVault) (*InformerController, error) {
+func NewResourcesInformer(config *rest.Config, namespaces []string, resources []schema.GroupVersionResource,
+	metricCollector *collector.MetricsVault) (*InformerController, error) {
 	client, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err

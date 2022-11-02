@@ -27,10 +27,16 @@ type Mapping struct {
 	Name string `yaml:"name"`
 	Help string `yaml:"help,omitempty"`
 
+	ReferenceAnnotations []string `yaml:"reference_annotations"`
+	ReferenceLabels      []string `yaml:"reference_labels"`
+
 	KubeResourceMeta []string `yaml:"resource_meta"`
 	KubeAnnotations  []string `yaml:"kube_labels,omitempty"`
 	KubeLabels       []string `yaml:"kube_annotations,omitempty"`
-	MaxRevisions     int      `yaml:"max_revisions,omitempty"`
+
+	MaxRevisions int `yaml:"max_revisions,omitempty"`
+
+	OnlyLabelsAndAnnotations bool `yaml:"only_labels_and_annotations,omitempty"`
 }
 
 type Sample struct {

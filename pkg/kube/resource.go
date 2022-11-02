@@ -27,27 +27,39 @@ func ResourceToSample(resource *unstructured.Unstructured) collector.Sample {
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
+
+	resourceMeta := []string{
+		resource.GetAPIVersion(),
+		resource.GetKind(),
+		resource.GetNamespace(),
+		resource.GetName(),
+	}
 	return collector.Sample{
 		ResourceLabels:      labels,
 		ResourceAnnotations: annotations,
-		ResourceMeta: []string{
-			resource.GetAPIVersion(),
-			resource.GetKind(),
-			resource.GetNamespace(),
-			resource.GetName(),
-		},
+		ResourceMeta:        resourceMeta,
 	}
 }
 
 // ResourceMapping creates the mapping for the prometheus metrics vault. The order of the labels here should match the one
 // from the sample converter function.
-func ResourceMapping(kubeLabelNames, kubeAnnotationsNames []string, maxRevisions int) collector.Mapping {
+func ResourceMapping(kubeLabelNames, kubeAnnotationsNames []string, maxRevisions int, onlyLabelsAndAnnotations bool, referenceLabels, referenceAnnotations []string) collector.Mapping {
+	resourceMeta := make([]string, 0)
+	if !onlyLabelsAndAnnotations {
+		resourceMeta = []string{"api_version", "kind", "namespace", "name"}
+	}
 	return collector.Mapping{
-		Name:             ExporterMetricName,
-		Help:             "Expose Kubernetes annotations and lables from kubernetes objects",
-		KubeResourceMeta: []string{"api_version", "kind", "namespace", "name"},
+		Name: ExporterMetricName,
+		Help: "Expose Kubernetes annotations and lables from kubernetes objects",
+
+		ReferenceLabels:      referenceLabels,
+		ReferenceAnnotations: referenceAnnotations,
+
+		KubeResourceMeta: resourceMeta,
 		KubeLabels:       kubeLabelNames,
 		KubeAnnotations:  kubeAnnotationsNames,
-		MaxRevisions:     maxRevisions,
+
+		MaxRevisions:             maxRevisions,
+		OnlyLabelsAndAnnotations: onlyLabelsAndAnnotations,
 	}
 }

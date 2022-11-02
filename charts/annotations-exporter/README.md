@@ -1,6 +1,6 @@
 # annotations-exporter
 
-![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 Prometheus-exporter, which converts any Kubernetes resources annotations and labels to Prometheus samples.
 
@@ -15,13 +15,16 @@ Kubernetes: `>=1.10.0-0`
 | replicaCount | int | `1` | Number of replicas (pods) to launch. |
 | image.repository | string | `"ghcr.io/alex123012/annotations-exporter"` | Name of the image repository to pull the container image from. |
 | image.pullPolicy | string | `"IfNotPresent"` | [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node. |
-| image.tag | string | `"v0.4.0"` | Image tag override for the default value (chart appVersion). |
+| image.tag | string | `"v0.5.0"` | Image tag override for the default value (chart appVersion). |
 | cmdArgs."kube.resources" | list | `["deployments/apps","ingresses/v1/networking.k8s.io","statefulsets/apps","daemonsets/apps"]` | Kubernetes resources for annotations and labels to export. |
-| cmdArgs."kube.annotations" | list | `["ci.werf.io/commit","gitlab.ci.werf.io/pipeline-url"]` | Kubernetes resources annotations to export. |
-| cmdArgs."kube.labels" | list | `["app"]` | Kubernetes resources labels to export. |
+| cmdArgs."kube.annotations" | list | `[]` | Kubernetes resources annotations to export. |
+| cmdArgs."kube.labels" | list | `[]` | Kubernetes resources labels to export. |
 | cmdArgs."kube.namespaces" | list | `[""]` | Kubernetes namespaces to watch. |
 | cmdArgs."kube.max-revisions" | int | `3` | Max revisions of resource labels to store. |
 | cmdArgs."server.log-level" | string | `"debug"` | Log level. |
+| cmdArgs."kube.only-labels-and-annotations" | bool | `false` | Export only labels and annotations defined by flags (usefull for exposing ) |
+| cmdArgs."kube.reference-labels" | list | `[]` | Labels names to use in prometheus metric labels and for count revisions (reference name) |
+| cmdArgs."kube.reference-annotations" | list | `[]` | Annotations names to use in prometheus metric labels and for count revisions (reference name) |
 | imagePullSecrets | list | `[]` | Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries). |
 | nameOverride | string | `""` | A name in place of the chart name for `app:` labels. |
 | fullnameOverride | string | `""` | A name to substitute for the full names of resources. |
@@ -42,6 +45,7 @@ Kubernetes: `>=1.10.0-0`
 | affinity | object | `{}` | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) configuration. See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details. |
 | strategy | object | `{}` | Deployment [strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) configuration. |
 | service.annotations | object | `{}` | Annotations to be added to the service. |
+| service.labels | object | `{}` | Labels to be added to the service. |
 | service.type | string | `"ClusterIP"` | Kubernetes [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | service.clusterIP | string | `""` | Internal cluster service IP (when applicable) |
 | service.ports.port | int | `8000` | HTTP service port |

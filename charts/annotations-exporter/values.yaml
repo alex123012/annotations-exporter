@@ -9,7 +9,7 @@ image:
   pullPolicy: IfNotPresent
 
   # -- Image tag override for the default value (chart appVersion).
-  tag: "v0.4.0"
+  tag: "v0.5.0"
 
 cmdArgs:
   # -- Kubernetes resources for annotations and labels to export.
@@ -19,12 +19,9 @@ cmdArgs:
     - "statefulsets/apps"
     - "daemonsets/apps"
   # -- Kubernetes resources annotations to export.
-  "kube.annotations":
-    - ci.werf.io/commit
-    - gitlab.ci.werf.io/pipeline-url
+  "kube.annotations": []
   # -- Kubernetes resources labels to export.
-  "kube.labels":
-    - app
+  "kube.labels": []
   # -- Kubernetes namespaces to watch.
   "kube.namespaces":
     - "" # "" (empty string) for all namespaces
@@ -32,6 +29,15 @@ cmdArgs:
   "kube.max-revisions": 3
   # -- Log level.
   "server.log-level": debug
+
+  # -- Export only labels and annotations defined by flags (usefull for exposing )
+  "kube.only-labels-and-annotations": false
+
+  # -- Labels names to use in prometheus metric labels and for count revisions (reference name)
+  "kube.reference-labels": []
+
+  # -- Annotations names to use in prometheus metric labels and for count revisions (reference name)
+  "kube.reference-annotations": []
 
 # -- Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries).
 imagePullSecrets: []
@@ -141,6 +147,9 @@ strategy:
 service:
   # -- Annotations to be added to the service.
   annotations: {}
+
+  # -- Labels to be added to the service.
+  labels: {}
 
   # -- Kubernetes [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
   type: ClusterIP

@@ -30,6 +30,10 @@ var (
 	maxRevisions int = 3
 	logLevel     string
 	kubeconfig   string
+
+	onlyLabelsAndAnnotations bool
+	referenceAnnotations     []string
+	referenceLabels          []string
 )
 
 func main() {
@@ -54,6 +58,9 @@ func main() {
 	flags.StringSliceVar(&namespaces, "kube.namespaces", namespaces, "Specifies the namespace that the exporter will monitor resources in (default 'all namespaces')")
 	flags.IntVar(&maxRevisions, "kube.max-revisions", maxRevisions, "Max revisions of resource labels to store")
 	flags.StringVar(&kubeconfig, "kube.config", kubeconfig, "Path to kubeconfig (optional)")
+	flags.StringSliceVar(&referenceAnnotations, "kube.reference-annotations", referenceAnnotations, "Annotations names to use in prometheus metric labels and for count revisions (reference names)")
+	flags.StringSliceVar(&referenceLabels, "kube.reference-labels", referenceLabels, "Labels names to use in prometheus metric labels and for count revisions (reference names)")
+	flags.BoolVar(&onlyLabelsAndAnnotations, "kube.only-labels-and-annotations", onlyLabelsAndAnnotations, "Export only labels and annotations defined by flags (default false)")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -81,7 +88,10 @@ func Run(ctx context.Context) error {
 	}
 
 	metricVault := collector.NewVault()
-	if err := metricVault.RegisterMappings([]collector.Mapping{kube.ResourceMapping(labels, annotations, 3)}); err != nil {
+	if err := metricVault.RegisterMappings([]collector.Mapping{
+		kube.ResourceMapping(labels, annotations, maxRevisions,
+			onlyLabelsAndAnnotations, referenceLabels, referenceAnnotations),
+	}); err != nil {
 		log.Fatal(err)
 	}
 
